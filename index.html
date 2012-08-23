@@ -4,12 +4,48 @@
     <meta charset="utf-8">
     <title></title>
     <style type="text/css" media="screen">
+      body {
+        font-family: 'Source Sans Pro', 'Open Sans', Helvetica, sans-serif;
+        color:#333;
+      }
+      
+      h1, h2 {
+        font-weight:normal;
+      }
+      
+      table {
+        width:100%;
+      }
+      
+      th {
+        text-align:left;
+        border-bottom: 1px solid #666;
+      }
+      
+      td  {
+        border-bottom: 1px dotted #666;
+        padding:5px 20px 5px 5px;
+      }
+      
+      .map {
+        height:150px;
+      }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
-    <script src="js/underscore.js"></script>
+    <script src="js/underscore.js"></script>    
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyBiLp_de7BvYPnNBPmxxuHuGeg-CyNCVYc&sensor=false"></script>
     
     <script type="text/javascript" charset="utf-8">
-      var inputs = [
+    var geocoder; 
+    var mapOptions = {
+      center: new google.maps.LatLng(-34.397, 150.644),
+      zoom: 8,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    
+    
+    $(function() {
+      var locations = [
         "7737 Kercheval Street",
         "555 Warren",
         "Woodward and Warren",
@@ -20,29 +56,230 @@
         "Fairgrounds"
       ];
       
+      
+      geocoder = new google.maps.Geocoder();
+      
+      // Nominatim ...........................................................
+      var nominatim = function(location, callback) {
+        var url = _.template(
+          "http://nominatim.openstreetmap.org/search?q=<%= location %>&format=json&json_callback=?",
+          { location: location }
+        );
+        
+        $.getJSON(url, function(data) {
+          console.log("Nominatum");
+          console.log(data);
+          
+          var result = {
+            geocoder: "nominatim",
+            'fullname': null,
+            'lat': null,
+            'lng': null
+          };
+          if(data.length > 0) {
+            result['fullname'] = data[0].display_name;
+            result['lat'] = data[0].lat;
+            result['lng'] = data[0].lon;
+          };
+          callback(result);
+          
+        });
+      };
+
+
+      // Yahoo ...............................................................
+      var yahoo = function(location, callback) {
+        var url = _.template(
+          "http://where.yahooapis.com/geocode?q=<%= location %>&flags=J&appid=MIab7d4o",
+          { location: location }
+        );
+        
+        console.log(url);
+        
+        $.getJSON(url, function(data) {
+          console.log("Yahoo");
+          console.log(data);
+          var data = data['ResultSet']['Results'];
+          
+          var result = {
+            'geocoder': "yahoo",
+            'fullname': null,
+            'lat': null,
+            'lng': null
+          };
+          if(data.length > 0) {
+            result['fullname'] = data[0].line1 + " " + data[0].line2 ;
+            result['lat'] = data[0].latitude;
+            result['lng'] = data[0].longitude;
+          };
+          callback(result);
+        });
+        
+      };
+      
+      
+      // Mapquest ............................................................
+      var mapquest = function(location, callback) {
+        var url = _.template (
+          "http://www.mapquestapi.com/geocoding/v1/address?key=Fmjtd%7Cluua250b21%2Ca0%3Do5-96200a&location=<%= location %>",
+          { location: location }
+        );
+        
+        $.ajax({
+          url: url,
+          dataType: 'jsonp',
+          success: function(data) {
+            console.log("MapQuest");
+            console.log(data);
+            
+            var result = {
+              'geocoder': "mapquest",
+              'fullname': null,
+              'lat': null,
+              'lng': null
+            };
+            if(data.results.length > 0) {
+              result['fullname'] = data.results[0].locations[0].street;
+              result['lat'] = data.results[0].locations[0].latLng.lat;
+              result['lng'] = data.results[0].locations[0].latLng.lng;
+            }
+            callback(result);
+          }
+        });
+      };
+      
+      
+      // Google ..............................................................
+      var googleGeocodeTest = function(location, callback) {
+        geocoder.geocode( { 'address': location}, function(data, status) {
+          if (status == google.maps.GeocoderStatus.OK) {
+            console.log("Google");
+            console.log(data);
+            
+            var result = {
+              'geocoder': "google",
+              'fullname': null,
+              'lat': null,
+              'lng': null
+            };
+            if(data.length > 0) {
+              result['fullname'] = data[0].formatted_address;
+              result['lat'] = data[0].geometry.location.lat();
+              result['lng'] = data[0].geometry.location.lng();
+            }
+            callback(result);
+            
+          } else {
+            alert('Geocode was not successful for the following reason: ' + status);
+          }
+        });
+      };
+      
+      
+      // Run the tests .......................................................
+      var geocoders = [
+        // nominatim, // I think we've proven that Nomintim doesn't work well and is hard to spell.
+        yahoo,
+        mapquest,
+        googleGeocodeTest
+      ];
+            
+      var $container = $("#container");
+      
+      function code(locations) {
+        setTimeout(function() {
+          
+          var location = locations[0];
+          var id = _.uniqueId('location-'); 
+          var loc = _.template($('#location').html(), {location: location, id: id});
+          $container.append(loc);
+          
+          // Set up a map
+          
+          var map = new google.maps.Map($('#' + id).find('.map'),
+              mapOptions);
+          
+          // Run each of the geocoders
+          location = location + ", Detroit, MI United States";
+          _.each(geocoders, function(gc) {
+            gc(location, function(result) {
+              var r = _.template($('#result').html(), result);
+              $('#' + id).find('tbody').append(r);
+            });
+          });
+
+          locations.shift();
+          if(locations.length !== 0) {
+           code(locations);
+          }
+        }, 2000);
+      }
+      
+      code(locations);
+      
+    });
+      
     // USC
     // http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebService.aspx
     // http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsed_V03_01.aspx?streetAddress=9355%20Burton%20Way&city=Beverly%20Hills&state=ca&zip=90210&apikey=demo&format=XML&census=false&notStore=false&version=3.01
       
     // Mapquest
     // http://www.mapquestapi.com/geocoding/
-    // http://www.mapquestapi.com/geocoding/v1/address?key=YOUR_KEY_HERE&location=Lancaster,PA&callback=renderGeocode
+    // 
+    // http://www.mapquestapi.com/geocoding/v1/address?key=Fmjtd%7Cluua2q02nq%2C7n%3Do5-hr75h&location=Lancaster,PA&callback=renderGeocode
     
     // Yahoo Placefinder
+    // https://developer.apps.yahoo.com/projects/MIab7d4o
     // http://developer.yahoo.com/geo/placefinder/
-    // http://where.yahooapis.com/geocode?location=San+Francisco,+CA&flags=J&appid=yourappid
+    // http://where.yahooapis.com/geocode?location=San+Francisco,+CA&flags=J&appid=MIab7d4o
     
     // Google
     // https://developers.google.com/maps/documentation/geocoding/
     // http://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&sensor=true_or_false
     
-    
+    // Nominatim 
+    // http://wiki.openstreetmap.org/wiki/Nominatim
+    //  http://nominatim.openstreetmap.org/search?q=Street Name&format=json&json_callback=(fn)
     </script>
 </head>
 
 <body>
     <div id="container">
-        
     </div>
+    
+    <script type="text/template" id="result">
+      <tr>
+        <td><%= geocoder %>:</td>
+        <% if(fullname !== null ){ %>
+          <td><%= fullname %> </td>
+          <td><%= lat %> </td>
+          <td><%= lng %></td>
+        <% }else { %>
+          <td colspan="3">No place found</td>
+        <% } %>
+      </tr>
+    </script>
+    
+    <script type="text/template" id="location">
+      <div id="<%= id %>">
+        <h2><%= location %></h2>
+        
+        <div class="map"></div>
+        
+        <table class="results">
+          <thead>
+            <tr>
+              <th>Geocoder</th>
+              <th>Address Found</th>
+              <th>Lat</th>
+              <th>Lng</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </script>
+    
 </body>
 </html>
