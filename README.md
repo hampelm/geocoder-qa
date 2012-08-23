@@ -1,14 +1,11 @@
 A quick and easy way to test the quality Detroit coverage across multiple
 geocoders. 
 
-Queries
-=====
+To run: 
+======
+Clone and open index.html in a browser. 
 
-* `7737 Kercheval Street`
-* `555 Warren`
-* `Woodward and Warren`
-* `City Hall`
-* `Rosa Parks`
-* `RPTC`
-* `Mack and MLK`
-* `Fairgrounds`
+To add queries:
+======
+Add locations / phrases / whatever you want to the `locations` list in 
+index.html.
