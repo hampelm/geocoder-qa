@@ -14,7 +14,8 @@
       }
       
       table {
-        width:100%;
+        width:75%;
+        float:left;
       }
       
       th {
@@ -29,6 +30,12 @@
       
       .map {
         height:150px;
+        width:20%;
+        float:right;
+      }
+      
+      .location {
+        overflow:auto;
       }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
@@ -38,6 +45,7 @@
     <script type="text/javascript" charset="utf-8">
     var geocoder; 
     var mapOptions = {
+      disableDefaultUI: true,
       center: new google.maps.LatLng(-34.397, 150.644),
       zoom: 8,
       mapTypeId: google.maps.MapTypeId.ROADMAP
@@ -177,13 +185,13 @@
       
       
       // Run the tests .......................................................
-      var geocoders = [
-        // nominatim, // I think we've proven that Nomintim doesn't work well and is hard to spell.
-        yahoo,
-        mapquest,
-        googleGeocodeTest
-      ];
-            
+      var geocoders = {
+        'blue': nominatim, //  
+        'purple': yahoo,           
+        'red':   mapquest,        
+        'green':  googleGeocodeTest,
+      };
+                  
       var $container = $("#container");
       
       function code(locations) {
@@ -195,16 +203,37 @@
           $container.append(loc);
           
           // Set up a map
-          
-          var map = new google.maps.Map($('#' + id).find('.map'),
+          var map = new google.maps.Map($('#' + id).find('.map')[0],
               mapOptions);
+          var bounds = new google.maps.LatLngBounds();
+          
+          // Make the location easier to process
+          location = location + ", Detroit, MI United States";
           
           // Run each of the geocoders
-          location = location + ", Detroit, MI United States";
-          _.each(geocoders, function(gc) {
+          _.each(geocoders, function(gc, color) {
+            
             gc(location, function(result) {
+              
+              result['color'] = color;
+              // Append the result
               var r = _.template($('#result').html(), result);
               $('#' + id).find('tbody').append(r);
+              
+              // Update the map
+              if (result.lat !== null) {
+                console.log("http://maps.google.com/intl/en_us/mapfiles/ms/micons/" + color + "-dot.png");
+                var latlng = new google.maps.LatLng(parseFloat(result.lat), parseFloat(result.lng));
+                var marker = new google.maps.Marker({
+                  position: latlng,
+                  map: map,
+                  icon: "http://maps.google.com/intl/en_us/mapfiles/ms/micons/" + color + "-dot.png"
+                });
+                console.log(marker);
+                bounds.extend(latlng);
+                map.fitBounds(bounds);
+              }
+              
             });
           });
 
@@ -222,24 +251,11 @@
     // USC
     // http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebService.aspx
     // http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsed_V03_01.aspx?streetAddress=9355%20Burton%20Way&city=Beverly%20Hills&state=ca&zip=90210&apikey=demo&format=XML&census=false&notStore=false&version=3.01
-      
-    // Mapquest
-    // http://www.mapquestapi.com/geocoding/
-    // 
-    // http://www.mapquestapi.com/geocoding/v1/address?key=Fmjtd%7Cluua2q02nq%2C7n%3Do5-hr75h&location=Lancaster,PA&callback=renderGeocode
     
-    // Yahoo Placefinder
-    // https://developer.apps.yahoo.com/projects/MIab7d4o
-    // http://developer.yahoo.com/geo/placefinder/
-    // http://where.yahooapis.com/geocode?location=San+Francisco,+CA&flags=J&appid=MIab7d4o
+    // Bing
+    // http://msdn.microsoft.com/en-us/library/cc966793
+    // http://dev.virtualearth.net/REST/v1/Locations/1 Microsoft Way Redmond WA 98052?o=xml&key=BingMapsKey
     
-    // Google
-    // https://developers.google.com/maps/documentation/geocoding/
-    // http://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&sensor=true_or_false
-    
-    // Nominatim 
-    // http://wiki.openstreetmap.org/wiki/Nominatim
-    //  http://nominatim.openstreetmap.org/search?q=Street Name&format=json&json_callback=(fn)
     </script>
 </head>
 
@@ -249,19 +265,20 @@
     
     <script type="text/template" id="result">
       <tr>
-        <td><%= geocoder %>:</td>
+        <td style="color: <%= color %>"><%= geocoder %>:</td>
         <% if(fullname !== null ){ %>
           <td><%= fullname %> </td>
           <td><%= lat %> </td>
           <td><%= lng %></td>
+          <td align="right"><img src="http://maps.google.com/intl/en_us/mapfiles/ms/micons/<%= color %>-dot.png"></td>
         <% }else { %>
-          <td colspan="3">No place found</td>
+          <td colspan="4">No place found</td>
         <% } %>
       </tr>
     </script>
     
     <script type="text/template" id="location">
-      <div id="<%= id %>">
+      <div id="<%= id %>" class="location">
         <h2><%= location %></h2>
         
         <div class="map"></div>
@@ -273,6 +290,7 @@
               <th>Address Found</th>
               <th>Lat</th>
               <th>Lng</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
