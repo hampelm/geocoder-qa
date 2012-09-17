@@ -54,14 +54,20 @@
     
     $(function() {
       var locations = [
-        "7737 Kercheval Street",
-        "555 Warren",
         "Woodward and Warren",
-        "City Hall",
-        "Rosa Parks",
-        "RPTC",
-        "Mack and MLK",
-        "Fairgrounds"
+        "rosa parks",
+        "rosa parks transit center"
+        // "CAYMC",
+        // "Caymac",
+        // "Woodward & 6th",
+        // "7737 Kercheval Street",
+        // "555 Warren",
+        // "Woodward and Warren",
+        // "City Hall",
+        // "Rosa Parks",
+        // "RPTC",
+        // "Mack and MLK",
+        // "Fairgrounds"
       ];
       
       
@@ -73,6 +79,8 @@
           "http://nominatim.openstreetmap.org/search?q=<%= location %>&format=json&json_callback=?",
           { location: location }
         );
+        
+        console.log(url); // sanity check since these results are so bad.
         
         $.getJSON(url, function(data) {
           console.log("Nominatum");
