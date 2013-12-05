@@ -1,4 +1,4 @@
-A quick and easy way to test the quality Detroit coverage across multiple
+A quick and easy way to test the quality of Detroit coverage across multiple
 geocoders. 
 
 To run: 
